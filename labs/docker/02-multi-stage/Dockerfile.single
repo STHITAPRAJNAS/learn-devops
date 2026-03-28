@@ -1,0 +1,25 @@
+# ─── Single-Stage Build (naive / NOT recommended) ─────────────────────────
+# This Dockerfile puts everything — Go compiler, build tools, source code,
+# AND the compiled binary — into the final image.
+#
+# Purpose: demonstrate WHY multi-stage builds matter.
+# DO NOT use this pattern in production.
+
+FROM golang:1.22-alpine
+
+WORKDIR /app
+
+COPY go.mod ./
+RUN go mod download
+
+COPY . .
+
+RUN go build -o /app/server .
+
+EXPOSE 8080
+
+CMD ["/app/server"]
+
+# Result: ~800–1000 MB image
+# Includes: Go compiler, build cache, source code, stdlib, alpine OS tools
+# None of that is needed to RUN the binary!

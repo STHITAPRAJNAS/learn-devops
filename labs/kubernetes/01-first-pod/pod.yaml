@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod
+  # Labels are key-value pairs used for selection, filtering, and grouping
+  labels:
+    app: nginx
+    env: lab
+    tier: frontend
+
+  # Annotations are for non-identifying metadata (tools, documentation)
+  annotations:
+    description: "Lab 01 — First Kubernetes Pod"
+    contact: "devops-team@example.com"
+
+spec:
+  # ── Containers ────────────────────────────────────────────────────────────
+  containers:
+  - name: nginx
+    image: nginx:1.25-alpine
+
+    # Expose port 80 (documentation; doesn't publish it to the host)
+    ports:
+    - name: http
+      containerPort: 80
+      protocol: TCP
+
+    # Resource requests and limits
+    # Requests: guaranteed by the scheduler
+    # Limits: hard cap — container is throttled (CPU) or killed (memory)
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "25m"       # 25 millicores = 0.025 CPU
+      limits:
+        memory: "64Mi"
+        cpu: "100m"
+
+    # Liveness probe: if this fails, Kubernetes restarts the container
+    livenessProbe:
+      httpGet:
+        path: /
+        port: http
+      initialDelaySeconds: 10    # Wait 10s after container start before first check
+      periodSeconds: 10          # Check every 10 seconds
+      timeoutSeconds: 5          # Fail if no response within 5 seconds
+      failureThreshold: 3        # Restart after 3 consecutive failures
+      successThreshold: 1        # 1 success = alive
+
+    # Readiness probe: if this fails, Pod is removed from Service endpoints
+    # (traffic stops going to it, but container is NOT restarted)
+    readinessProbe:
+      httpGet:
+        path: /
+        port: http
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+      successThreshold: 1
+
+    # Environment variables
+    env:
+    - name: NGINX_HOST
+      value: "localhost"
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name    # Inject own Pod name
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+
+  # ── Pod-level settings ───────────────────────────────────────────────────
+
+  # Restart policy:
+  # Always   — restart on any exit (default, good for web servers)
+  # OnFailure — restart only on non-zero exit (good for jobs)
+  # Never    — never restart
+  restartPolicy: Always
+
+  # Give 30 seconds for graceful shutdown before SIGKILL
+  terminationGracePeriodSeconds: 30

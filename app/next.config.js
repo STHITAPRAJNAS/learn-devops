@@ -2,6 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  output: "standalone",
   // Allow markdown files to be imported
   pageExtensions: ["tsx", "ts", "jsx", "js"],
   // Optimise images

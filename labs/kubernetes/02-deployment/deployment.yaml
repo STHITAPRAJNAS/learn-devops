@@ -1,0 +1,129 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp
+  labels:
+    app: webapp
+    tier: frontend
+
+spec:
+  # Desired number of pod replicas
+  replicas: 3
+
+  # The deployment uses this selector to find and manage its pods
+  # MUST match spec.template.metadata.labels
+  selector:
+    matchLabels:
+      app: webapp
+
+  # Rolling update strategy
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # Maximum number of pods that can be unavailable during update
+      maxUnavailable: 1
+      # Maximum number of pods that can be created above the desired replica count
+      maxSurge: 1
+
+  # How many old ReplicaSets to keep (allows rollback to these revisions)
+  revisionHistoryLimit: 5
+
+  # Fail the rollout if it takes longer than this
+  progressDeadlineSeconds: 300
+
+  # ── Pod Template ──────────────────────────────────────────────────────────
+  # This is the template for creating pods — it IS a Pod spec
+  template:
+    metadata:
+      labels:
+        app: webapp          # MUST match spec.selector.matchLabels
+        tier: frontend
+        version: "1.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "80"
+
+    spec:
+      # ── Containers ────────────────────────────────────────────────────────
+      containers:
+      - name: nginx
+        # Lab starts with 1.24, we'll upgrade to 1.25 during the rolling update step
+        image: nginx:1.24-alpine
+
+        ports:
+        - name: http
+          containerPort: 80
+
+        # Resource requests and limits
+        # Requests: what the scheduler uses for placement decisions
+        # Limits: hard cap (CPU throttling, OOMKill for memory)
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "25m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+
+        # Readiness probe — controls when this pod receives traffic from the Service
+        # A pod must pass readinessProbe before its IP is added to Endpoints
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 3
+
+        # Liveness probe — if this fails, Kubernetes RESTARTS the container
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+
+        # Startup probe — gates liveness/readiness until the app has started
+        # Useful for slow-starting apps (JVM, etc.)
+        # startupProbe:
+        #   httpGet:
+        #     path: /
+        #     port: http
+        #   failureThreshold: 30
+        #   periodSeconds: 10
+
+        # Environment variables
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+
+        # To inject from a ConfigMap, uncomment:
+        # envFrom:
+        # - configMapRef:
+        #     name: webapp-config
+
+      # Give nginx 15 seconds to finish serving current requests before SIGKILL
+      terminationGracePeriodSeconds: 15
+
+      # Pod-level anti-affinity: prefer scheduling pods on different nodes
+      # (soft rule — won't fail if only 1 node is available)
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app: webapp

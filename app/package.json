@@ -19,7 +19,8 @@
     "rehype-raw": "^7.0.0",
     "highlight.js": "^11.9.0",
     "lucide-react": "^0.376.0",
-    "clsx": "^2.1.1"
+    "clsx": "^2.1.1",
+    "raw-loader": "^4.0.2"
   },
   "devDependencies": {
     "@types/node": "^20.12.12",
