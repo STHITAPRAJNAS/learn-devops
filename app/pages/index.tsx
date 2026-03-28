@@ -56,6 +56,13 @@ function Hero() {
             Start Learning
             <ArrowRight className="w-4 h-4" />
           </Link>
+          <Link
+            href="/playground"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-semibold transition-all shadow-lg shadow-purple-600/20"
+          >
+            <Terminal className="w-4 h-4" />
+            Open Playground
+          </Link>
           <a
             href="https://github.com"
             target="_blank"
